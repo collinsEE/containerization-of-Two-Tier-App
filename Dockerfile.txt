@@ -1,12 +1,20 @@
-# Example for a Node.js app
-FROM node:20-alpine AS build
+# Stage 1: Build dependencies
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
-COPY . .
+RUN npm install --production
 
+# Stage 2: Final production image
 FROM node:20-alpine
 WORKDIR /app
-COPY --from=build /app .
-USER node 
+
+# Create a non-root user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+# Copy only necessary files from the builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY . .
+
+EXPOSE 8080
 CMD ["node", "app.js"]
